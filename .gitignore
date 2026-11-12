@@ -1,0 +1,5 @@
+# Los reportes contienen ventas reales: nunca se suben al repositorio.
+*.xlsx
+*.xls
+historial-conteo-*.json
+.claude/

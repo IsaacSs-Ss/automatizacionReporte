@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Conteo de Productos</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="parser.js"></script>
+</head>
+<body>
+  <header class="top">
+    <div>
+      <h1>Conteo de productos vendidos</h1>
+      <p class="sub" id="subtitulo">Sube el reporte <em>Ventas por Sucursal</em> (.xlsx) para ver el conteo.</p>
+    </div>
+    <div class="acciones-top">
+      <button class="btn ghost" id="btnExportar" title="Descargar el historial como respaldo">Exportar historial</button>
+      <label class="btn ghost" title="Cargar un respaldo del historial">
+        Importar historial<input type="file" id="inpImportar" accept="application/json" hidden />
+      </label>
+    </div>
+  </header>
+
+  <main>
+    <label class="drop" id="drop">
+      <input type="file" id="inpArchivo" accept=".xlsx,.xls" multiple hidden />
+      <strong>Arrastra aquí el reporte</strong>
+      <span>o haz clic para elegirlo. Puedes subir varios días a la vez.</span>
+      <small>El archivo se lee en tu navegador; no se envía a ningún servidor.</small>
+    </label>
+    <p class="error" id="error" hidden></p>
+
+    <section id="panel" hidden>
+      <div class="barra">
+        <div class="campo">
+          <label for="selActual">Reporte</label>
+          <select id="selActual"></select>
+        </div>
+        <div class="campo">
+          <label for="selComparar">Comparar contra</label>
+          <select id="selComparar"></select>
+        </div>
+        <div class="chips" id="chips" role="group" aria-label="Filtrar por categoría"></div>
+      </div>
+
+      <div class="kpis" id="kpis"></div>
+
+      <div class="tarjeta">
+        <div class="tarjeta-head">
+          <h2>Por producto</h2>
+          <input type="search" id="buscar" placeholder="Buscar producto…" />
+        </div>
+        <div class="tabla-scroll">
+          <table id="tabla">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tarjeta">
+        <div class="tarjeta-head">
+          <h2>Historial</h2>
+          <span class="nota" id="notaHistorial"></span>
+        </div>
+        <div class="tabla-scroll">
+          <table id="tablaHistorial">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <details class="tarjeta">
+        <summary>Ver qué líneas del Excel se contaron</summary>
+        <div class="tabla-scroll">
+          <table id="tablaDetalle">
+            <thead><tr><th>Producto</th><th>Tabla</th><th>Nombre en el reporte</th><th>Área</th><th class="num">Cantidad</th><th class="num">×</th><th class="num">Unidades</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
