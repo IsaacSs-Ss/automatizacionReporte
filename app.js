@@ -17,17 +17,26 @@
   };
   const CATEGORIAS = [...new Set(P.PRODUCTOS.map((p) => p.categoria))];
 
+  // Íconos de línea (SVG) en lugar de emojis.
+  const svg = (d) => `<svg class="icono" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+  const ICONOS = {
+    vaso: svg('<path d="M6 3h12l-1.6 17.2a1 1 0 0 1-1 .8H8.6a1 1 0 0 1-1-.8z"/><path d="M6.6 9h10.8"/><path d="M14 3l2-2"/>'),
+    taco: svg('<path d="M3 17a9 9 0 0 1 18 0z"/><path d="M7 13.5c1-.8 2-.8 3 0s2 .8 3 0 2-.8 3 0"/>'),
+    grafica: svg('<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>'),
+    tabla: svg('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16"/>'),
+  };
+
   // Dos paneles: bebidas y alimentos, con 3 categorías cada uno.
   const PANELES = {
-    bebidas: { nombre: "Bebidas", icono: "🥤", img: IMG + "2025/04/bebidas_elmexiquense.jpg",
+    bebidas: { nombre: "Bebidas", icono: "vaso", img: IMG + "2025/04/bebidas_elmexiquense.jpg",
       cats: ["Refrescos", "Cervezas", "Jugos, aguas y café"] },
-    alimentos: { nombre: "Alimentos", icono: "🌮", img: IMG + "2025/04/tacos-dorados-barbacoa.jpg",
+    alimentos: { nombre: "Alimentos", icono: "taco", img: IMG + "2025/04/tacos-dorados-barbacoa.jpg",
       cats: ["Tacos dorados", "Complementos", "Postres"] },
   };
   // Pestañas extra (sin foto)
   const PESTANAS_EXTRA = {
-    comparativo: { nombre: "Comparativo", icono: "📈" },
-    datos: { nombre: "Datos", icono: "🗂" },
+    comparativo: { nombre: "Comparativo", icono: "grafica" },
+    datos: { nombre: "Datos", icono: "tabla" },
   };
   const pref = (k, def) => { try { return localStorage.getItem("conteoProductos." + k) || def; } catch (_) { return def; } };
   const guardarPref = (k, v) => { try { localStorage.setItem("conteoProductos." + k, v); } catch (_) { /* opcional */ } };
@@ -229,13 +238,13 @@
       const resumen = pn.cats.map((c) => `${num(sumaCat(act, c))} ${c.toLowerCase()}`).join(" · ");
       return `<button type="button" class="panel-tab" role="tab" data-panel="${id}" aria-selected="${id === estado.panel}">
         ${imagen(pn.img, pn.nombre)}
-        <span class="panel-tab-in"><span class="panel-tab-nombre">${pn.icono} ${pn.nombre}</span>
+        <span class="panel-tab-in"><span class="panel-tab-nombre">${ICONOS[pn.icono]}${pn.nombre}</span>
         <span class="panel-tab-res">${resumen}</span></span>
       </button>`;
     });
     const extra = Object.entries(PESTANAS_EXTRA).map(([id, t]) =>
       `<button type="button" class="panel-tab extra" role="tab" data-panel="${id}" aria-selected="${id === estado.panel}">
-        <span class="panel-tab-in"><span class="panel-tab-nombre">${t.icono} ${t.nombre}</span></span></button>`);
+        <span class="panel-tab-in"><span class="panel-tab-nombre">${ICONOS[t.icono]}${t.nombre}</span></span></button>`);
     el.paneles.innerHTML = fotos.concat(extra).join("");
 
     const esPanel = !!PANELES[estado.panel];
@@ -264,25 +273,24 @@
     return `<div class="pista"><div class="apilada" style="width:${Math.max(ancho, 2)}%" role="img" aria-label="${p.nombre}: ${areas.filter((a) => p.porArea[a]).map((a) => `${AREA_LARGO[a]} ${num(p.porArea[a])}`).join(", ")}">${segs}</div></div>`;
   }
 
-  /** Pie de columna: en qué área se vendió más la categoría. */
+  /** Pie de columna: ranking de áreas de la categoría, de más a menos. */
   function resumenAreas(act, cat, areas) {
     const lista = act.productos.filter((p) => p.categoria === cat);
     const total = lista.reduce((s, p) => s + p.total, 0);
     if (!total) return "";
-    const por = areas.map((a) => [a, lista.reduce((s, p) => s + (p.porArea[a] || 0), 0)]).filter(([, v]) => v);
-    const top = por.reduce((m, x) => (x[1] > m[1] ? x : m), por[0]);
-    const barra = por.map(([a, v]) =>
-      `<div style="flex:${v} 1 0;background:var(--a-${a})" data-tip="${esc(`<b>${cat}</b><br>${AREA_LARGO[a]}: <b>${num(v)}</b> (${fmtPct.format((v / total) * 100)}%)`)}"></div>`).join("");
-    const items = por.map(([a, v]) => `
-      <div class="ra-item ${a === top[0] ? "ra-top" : ""}">
-        <span class="ra-area"><i class="punto" style="background:var(--a-${a})"></i>${AREA_LARGO[a]}</span>
+    const por = areas.map((a) => [a, lista.reduce((s, p) => s + (p.porArea[a] || 0), 0)])
+      .filter(([, v]) => v).sort((x, y) => y[1] - x[1]);
+    const max = por[0][1];
+    const filas = por.map(([a, v], i) => `
+      <div class="ra-fila ${i === 0 ? "ra-top" : ""}" data-tip="${esc(`<b>${cat}</b><br>${AREA_LARGO[a]}: <b>${num(v)}</b> (${fmtPct.format((v / total) * 100)}%)`)}">
+        <span class="ra-area">${AREA_LARGO[a]}</span>
+        <span class="ra-pista"><span class="ra-b" style="width:${(v / max) * 100}%;background:var(--a-${a})"></span></span>
         <span class="ra-valor">${num(v)}</span>
         <span class="ra-pct">${fmtPct.format((v / total) * 100)}%</span>
       </div>`).join("");
     return `<div class="resumen-areas">
-      <div class="ra-titulo">¿Dónde se vendió? <span>Más en <b>${AREA_LARGO[top[0]]}</b></span></div>
-      <div class="ra-barra">${barra}</div>
-      <div class="ra-lista">${items}</div>
+      <div class="ra-titulo">¿Dónde se vendió más?</div>
+      ${filas}
     </div>`;
   }
 
@@ -304,10 +312,9 @@
       const filas = lista.map((p) => `
         <div class="fila">
           <div class="fila-top">
-            <span class="fila-nombre">${p.nombre}${p.unidad && p.unidad !== "unidades" ? ` <span class="nota">${p.unidad}</span>` : ""}</span>
+            <span class="fila-nombre">${p.nombre}${lista.length > 1 ? ` <span class="fila-parte" title="Parte del total de ${cat.toLowerCase()}">(${fmtPct.format(sumaCat(act, cat) ? (p.total / sumaCat(act, cat)) * 100 : 0)}%)</span>` : ""}${p.unidad && p.unidad !== "unidades" ? ` <span class="nota">${p.unidad}</span>` : ""}</span>
             <span class="fila-delta">${prev ? cambio(p.total, prev[p.id] ? prev[p.id].total : 0) : ""}</span>
             <span class="fila-valor">${num(p.total)}</span>
-            <span class="fila-parte" title="Parte del total de ${cat.toLowerCase()}">${fmtPct.format(sumaCat(act, cat) ? (p.total / sumaCat(act, cat)) * 100 : 0)}%</span>
           </div>
           ${barraApilada(p, max, areas)}
         </div>`).join("");
@@ -462,7 +469,7 @@
     el.notaHist.textContent = `(${ks.length})`;
     const mapas = ks.map((k) => mapa(reporte(k)));
     el.tablaHist.tHead.innerHTML = `<tr><th>Producto</th>${ks.map((k) =>
-      `<th class="num">${fechaCorta(k)} <button class="x" data-borrar="${encodeURIComponent(k)}" title="Quitar este día del historial">✕</button></th>`).join("")}${ks.length > 1 ? '<th class="num">Promedio</th>' : ""}</tr>`;
+      `<th class="num">${fechaCorta(k)} <button class="x" data-borrar="${encodeURIComponent(k)}" title="Quitar este día del historial">×</button></th>`).join("")}${ks.length > 1 ? '<th class="num">Promedio</th>' : ""}</tr>`;
     el.tablaHist.tBodies[0].innerHTML = P.PRODUCTOS.map((p) => {
       const vals = mapas.map((m) => (m[p.id] ? m[p.id].total : 0));
       const prom = vals.reduce((s, v) => s + v, 0) / vals.length;
