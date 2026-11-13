@@ -23,14 +23,19 @@ Reglas de conteo:
 | Producto | Cómo se cuenta |
 |---|---|
 | Tacos dorados | En piezas: taco suelto = 1, orden de 3 = 3, combo "3 tacos dorados" = 3, combo "2 dorados / 1 …" = 2. Los semidorados entran en el mismo conteo. |
-| Guacamole, Nopales | Orden = 1, media orden = 0.5. No se cuentan las quesadillas de nopal. |
+| Guacamole, Nopales | Orden = 1, media orden = 0.5 (2 medias órdenes = 1 orden). No se cuentan las quesadillas de nopal. El dashboard muestra cuántas fueron completas y cuántas medias. |
+| Aguacates | 1 pieza = 1 (no hay medias). |
+| Agua de horchata, Agua de jamaica | Vasos de 350 ml por área + las que se eligen en combos. |
+| Café de olla | Por área + el de los combos. No incluye café americano. |
 | Rojo | Solo el refresco "ROJO"; no se cuentan "ROJOS" ni "FRUTOS ROJOS" (sabores de nieve). |
 | Jugo | Jugo de 350 ml y el jugo de los combos. |
 | Resto | 1 línea vendida = 1 unidad. |
 
 En la sección **Ver qué líneas del Excel se contaron** de la página se puede revisar cada línea que sumó.
 
-Para agregar o cambiar productos, edita la lista `PRODUCTOS` en [`parser.js`](parser.js).
+Para agregar o cambiar productos, edita la lista `PRODUCTOS` en [`parser.js`](parser.js). El historial guarda las líneas originales de cada reporte, así que los días ya subidos se recalculan solos con las reglas nuevas.
+
+Las fotos de las categorías se cargan del menú oficial (barbacoamx.com). Si alguna no carga, la tarjeta se queda con el fondo café.
 
 ## Publicar en GitHub Pages
 

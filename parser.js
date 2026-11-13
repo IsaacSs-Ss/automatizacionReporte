@@ -34,23 +34,30 @@
     { id: "modelo-especial", nombre: "Modelo Especial", categoria: "Cervezas", reglas: [[/^MODELO ESPECIAL$/, 1]] },
     { id: "clamato", nombre: "Clamato", categoria: "Cervezas", reglas: [[/^CLAMATO$/, 1]] },
     { id: "jugo", nombre: "Jugo", categoria: "Bebidas", reglas: [[/^JUGO$/, 1]] },
+    // "AGUA HORCHATA TR (350 ml)" en platillos y "AGUA DE HORCHATA" en combos
+    { id: "agua-horchata", nombre: "Agua de horchata", categoria: "Bebidas", reglas: [[/^AGUA (DE )?HORCHATA$/, 1]] },
+    { id: "agua-jamaica", nombre: "Agua de jamaica", categoria: "Bebidas", reglas: [[/^AGUA (DE )?JAMAICA$/, 1]] },
+    // "CAFE DE OLLA TR" y "CAFÉ DE OLLA" (combos; a veces con la É dañada). No incluye café americano.
+    { id: "cafe-olla", nombre: "Café de olla", categoria: "Bebidas", reglas: [[/^CAF.{1,2} DE OLLA$/, 1]] },
     {
-      id: "tacos-dorados", nombre: "Tacos dorados", categoria: "Alimentos", unidad: "piezas",
+      id: "tacos-dorados", nombre: "Tacos dorados", categoria: "Tacos dorados", unidad: "piezas",
       // Dorados y semidorados van al mismo conteo, en piezas.
+      // El tercer valor es la etiqueta del desglose que se muestra en el dashboard.
       reglas: [
-        [/^TACO (SEMI)?DORADO$/, 1],
-        [/^ORDEN DE 3 (SEMI)?DORADOS?$/, 3],
-        [/^3 TACOS (SEMI)?DORADOS$/, 3],                 // modificador de combo
-        [/^2 (TACOS )?(SEMI)?DORADOS \/ 1 /, 2],         // combo 2 dorados + 1 de barbacoa
+        [/^TACO (SEMI)?DORADO$/, 1, "Taco suelto"],
+        [/^ORDEN DE 3 (SEMI)?DORADOS?$/, 3, "Orden de 3"],
+        [/^3 TACOS (SEMI)?DORADOS$/, 3, "En combo"],              // modificador de combo
+        [/^2 (TACOS )?(SEMI)?DORADOS \/ 1 /, 2, "En combo"],      // combo 2 dorados + 1 de barbacoa
       ],
     },
     {
+      // 2 medias órdenes = 1 orden.
       id: "guacamole", nombre: "Guacamole", categoria: "Complementos", unidad: "órdenes",
-      reglas: [[/^GUACAMOLE$/, 1], [/^MEDIA ORDEN DE GUACAMOLE$/, 0.5]],
+      reglas: [[/^GUACAMOLE$/, 1, "Orden completa"], [/^MEDIA ORDEN DE GUACAMOLE$/, 0.5, "Media orden"]],
     },
     {
       id: "nopales", nombre: "Nopales", categoria: "Complementos", unidad: "órdenes",
-      reglas: [[/^NOPALES$/, 1], [/^MEDIA ORDEN DE NOPALES$/, 0.5]],
+      reglas: [[/^NOPALES$/, 1, "Orden completa"], [/^MEDIA ORDEN DE NOPALES$/, 0.5, "Media orden"]],
     },
     { id: "aguacates", nombre: "Aguacates", categoria: "Complementos", reglas: [[/^AGUACATE$/, 1]] },
     { id: "panques", nombre: "Panqués", categoria: "Postres", reglas: [[/^PANQUE$/, 1]] },
@@ -96,8 +103,8 @@
 
   function clasificar(base) {
     for (const p of PRODUCTOS) {
-      for (const [re, factor] of p.reglas) {
-        if (re.test(base)) return { producto: p, factor };
+      for (const [re, factor, tipo] of p.reglas) {
+        if (re.test(base)) return { producto: p, factor, tipo: tipo || null };
       }
     }
     return null;
@@ -232,11 +239,37 @@
     if (!tablaPlatillos) throw new Error('No se encontró la tabla "Ventas por platillo / artículo" en la hoja 3.');
     if (!tablaModificadores) throw new Error('No se encontró la tabla "Ventas por modificador" en la hoja 3.');
 
+    // Se guardan las líneas originales (solo nombre, grupo y cantidad) para
+    // poder recalcular el conteo si después cambian los productos o las reglas.
+    const recortar = (f) => [f.nombre, f.grupo == null ? "" : String(f.grupo), f.cantidad];
+    const crudo = {
+      platillos: leerFilas(filas, tablaPlatillos).filter((f) => f.cantidad).map(recortar),
+      modificadores: leerFilas(filas, tablaModificadores).filter((f) => f.cantidad).map(recortar),
+    };
+
+    return Object.assign(
+      {
+        fecha: leerFecha(XLSX, wb, nombreArchivo),
+        sucursal: leerSucursal(XLSX, wb),
+        archivo: nombreArchivo || null,
+        crudo,
+      },
+      calcular(crudo)
+    );
+  }
+
+  /**
+   * Cuenta los productos a partir de las líneas crudas del reporte.
+   * crudo = { platillos: [[nombre, grupo, cantidad], ...], modificadores: [...] }
+   */
+  function calcular(crudo) {
     const resultado = {};
     for (const p of PRODUCTOS) {
       resultado[p.id] = {
         id: p.id, nombre: p.nombre, categoria: p.categoria, unidad: p.unidad || "unidades",
         total: 0, porArea: Object.fromEntries(AREAS.map((a) => [a, 0]).concat([["OTRA", 0]])),
+        // Desglose por tipo de línea: { "Media orden": { lineas: 17, unidades: 8.5 }, ... }
+        porTipo: {},
       };
     }
     const detalle = [];
@@ -250,20 +283,27 @@
       const r = resultado[c.producto.id];
       r.total += unidades;
       r.porArea[a] += unidades;
+      if (c.tipo) {
+        const t = (r.porTipo[c.tipo] = r.porTipo[c.tipo] || { lineas: 0, unidades: 0 });
+        t.lineas += fila.cantidad;
+        t.unidades += unidades;
+      }
       detalle.push({
         tabla: origen, clave: fila.clave, nombre: fila.nombre, grupo: fila.grupo,
         cantidad: fila.cantidad, factor: c.factor, unidades, area: a, productoId: c.producto.id,
       });
     }
 
-    for (const fila of leerFilas(filas, tablaPlatillos)) {
+    const aFila = ([nombre, grupo, cantidad]) => ({ nombre, grupo, cantidad: Number(cantidad) || 0 });
+
+    for (const fila of crudo.platillos.map(aFila)) {
       // Las líneas de combo (MCOM..., MODAL...) se cuentan desde la tabla de
       // modificadores; aquí se ignoran para no contarlas dos veces.
       const grupo = normalizar(fila.grupo);
       if (/^COMBOS/.test(grupo) || /^MOD /.test(grupo)) continue;
       sumar("Platillos", fila, separarArea(fila.nombre).area);
     }
-    for (const fila of leerFilas(filas, tablaModificadores)) {
+    for (const fila of crudo.modificadores.map(aFila)) {
       sumar("Modificadores", fila, separarArea(fila.nombre).area || areaDeGrupo(fila.grupo));
     }
 
@@ -273,14 +313,8 @@
       for (const a in r.porArea) r.porArea[a] = Math.round(r.porArea[a] * 100) / 100;
     }
 
-    return {
-      fecha: leerFecha(XLSX, wb, nombreArchivo),
-      sucursal: leerSucursal(XLSX, wb),
-      archivo: nombreArchivo || null,
-      productos: PRODUCTOS.map((p) => resultado[p.id]),
-      detalle,
-    };
+    return { productos: PRODUCTOS.map((p) => resultado[p.id]), detalle };
   }
 
-  return { PRODUCTOS, AREAS, AREA_NOMBRES, procesar, normalizar, separarArea, clasificar };
+  return { PRODUCTOS, AREAS, AREA_NOMBRES, procesar, calcular, normalizar, separarArea, clasificar };
 });

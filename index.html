@@ -4,35 +4,48 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Conteo de Productos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Lobster&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="parser.js"></script>
 </head>
 <body>
-  <header class="top">
-    <div>
-      <h1>Conteo de productos vendidos</h1>
-      <p class="sub" id="subtitulo">Sube el reporte <em>Ventas por Sucursal</em> (.xlsx) para ver el conteo.</p>
-    </div>
-    <div class="acciones-top">
-      <button class="btn ghost" id="btnExportar" title="Descargar el historial como respaldo">Exportar historial</button>
-      <label class="btn ghost" title="Cargar un respaldo del historial">
-        Importar historial<input type="file" id="inpImportar" accept="application/json" hidden />
-      </label>
+  <header class="marca">
+    <div class="marca-in">
+      <div>
+        <div class="logo">El Mexiquense</div>
+        <div class="marca-sub" id="subtitulo">Conteo de productos vendidos</div>
+      </div>
+      <div class="marca-acciones">
+        <label class="btn claro">
+          <input type="file" id="inpArchivo" accept=".xlsx,.xls" multiple hidden />
+          ⬆ Subir reporte
+        </label>
+        <details class="menu">
+          <summary class="btn claro" aria-label="Más opciones">⋯</summary>
+          <div class="menu-lista">
+            <button type="button" id="btnExportar">Exportar historial (respaldo)</button>
+            <label>Importar historial<input type="file" id="inpImportar" accept="application/json" hidden /></label>
+          </div>
+        </details>
+      </div>
     </div>
   </header>
 
   <main>
     <label class="drop" id="drop">
-      <input type="file" id="inpArchivo" accept=".xlsx,.xls" multiple hidden />
-      <strong>Arrastra aquí el reporte</strong>
+      <span class="drop-icono" aria-hidden="true">📊</span>
+      <strong>Arrastra aquí el reporte <em>Ventas por Sucursal</em></strong>
       <span>o haz clic para elegirlo. Puedes subir varios días a la vez.</span>
       <small>El archivo se lee en tu navegador; no se envía a ningún servidor.</small>
     </label>
     <p class="error" id="error" hidden></p>
 
-    <section id="panel" hidden>
-      <div class="barra">
+    <div id="panel" hidden>
+      <!-- Controles -->
+      <div class="controles">
         <div class="campo">
           <label for="selActual">Reporte</label>
           <select id="selActual"></select>
@@ -41,36 +54,43 @@
           <label for="selComparar">Comparar contra</label>
           <select id="selComparar"></select>
         </div>
-        <div class="chips" id="chips" role="group" aria-label="Filtrar por categoría"></div>
+        <div class="leyenda" id="leyenda" aria-label="Colores por área"></div>
       </div>
 
-      <div class="kpis" id="kpis"></div>
+      <!-- Resumen por categoría -->
+      <section class="categorias" id="categorias" aria-label="Resumen por categoría"></section>
 
-      <div class="tarjeta">
+      <!-- Detalle por categoría -->
+      <section id="bloques"></section>
+
+      <!-- Comparación -->
+      <section class="tarjeta" id="secComparacion" hidden>
         <div class="tarjeta-head">
-          <h2>Por producto</h2>
-          <input type="search" id="buscar" placeholder="Buscar producto…" />
+          <h2>¿Qué subió y qué bajó?</h2>
+          <span class="nota" id="notaComparacion"></span>
         </div>
-        <div class="tabla-scroll">
-          <table id="tabla">
-            <thead></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
+        <div id="graficaComparacion" class="divergente"></div>
+      </section>
 
-      <div class="tarjeta">
+      <!-- Tendencia -->
+      <section class="tarjeta" id="secTendencia" hidden>
         <div class="tarjeta-head">
-          <h2>Historial</h2>
-          <span class="nota" id="notaHistorial"></span>
+          <h2>Tendencia por día</h2>
+          <select id="selTendencia" aria-label="Producto"></select>
         </div>
-        <div class="tabla-scroll">
-          <table id="tablaHistorial">
-            <thead></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
+        <div id="graficaTendencia" class="tendencia"></div>
+      </section>
+
+      <!-- Tablas -->
+      <details class="tarjeta">
+        <summary>Ver los datos en tabla</summary>
+        <div class="tabla-scroll"><table id="tabla"><thead></thead><tbody></tbody></table></div>
+      </details>
+
+      <details class="tarjeta">
+        <summary>Historial guardado <span class="nota" id="notaHistorial"></span></summary>
+        <div class="tabla-scroll"><table id="tablaHistorial"><thead></thead><tbody></tbody></table></div>
+      </details>
 
       <details class="tarjeta">
         <summary>Ver qué líneas del Excel se contaron</summary>
@@ -81,9 +101,10 @@
           </table>
         </div>
       </details>
-    </section>
+    </div>
   </main>
 
+  <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
   <script src="app.js"></script>
 </body>
 </html>
