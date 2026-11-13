@@ -59,6 +59,7 @@
     drop: $("drop"), inp: $("inpArchivo"), error: $("error"), panel: $("panel"), sub: $("subtitulo"),
     selActual: $("selActual"), selComparar: $("selComparar"), leyenda: $("leyenda"),
     bloques: $("bloques"), paneles: $("paneles"), controles: $("controles"),
+    modo: $("modo"), tableroM: $("tableroMeseros"),
     vistaPanel: $("vistaPanel"), vistaComp: $("vistaComparativo"), vistaDatos: $("vistaDatos"), subDatos: $("subDatos"),
     secComp: $("secComparacion"), notaComp: $("notaComparacion"), grafComp: $("graficaComparacion"),
     secTend: $("secTendencia"), selTend: $("selTendencia"), grafTend: $("graficaTendencia"),
@@ -70,6 +71,7 @@
     historial: cargarHistorial(), actual: null, comparar: "", tendencia: "tacos-dorados",
     panel: PANELES[pref("panel")] || PESTANAS_EXTRA[pref("panel")] ? pref("panel") : "bebidas",
     tablaDatos: "tabla",
+    modo: pref("modo") === "meseros" ? "meseros" : "productos",
   };
   const cache = new Map();
 
@@ -93,9 +95,51 @@
     const d = new Date(+m[1], +m[2] - 1, +m[3]);
     return d.toLocaleDateString("es-MX", { weekday: "short", day: "numeric", month: "short" });
   }
-  function etiqueta(clave) {
-    const [f, s] = clave.split("|");
-    return s ? `${fechaCorta(clave)} (${f}) · ${s}` : fechaCorta(clave);
+  const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  const DIAS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+  const aFecha = (iso) => { const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; };
+  const anioSi = (d) => (d.getFullYear() !== new Date().getFullYear() ? ` de ${d.getFullYear()}` : "");
+
+  /** "2026-10-04" -> "Domingo 4 de octubre"; un rango -> "Del 1 al 3 de octubre". */
+  function fechaLarga(clave) {
+    const f = fechaDe(clave);
+    const rango = f.match(/^(\S+) a (\S+)$/);
+    if (rango) {
+      const a = aFecha(rango[1]), b = aFecha(rango[2]);
+      if (!a || !b) return f;
+      return a.getMonth() === b.getMonth()
+        ? `Del ${a.getDate()} al ${b.getDate()} de ${MESES[b.getMonth()]}${anioSi(b)}`
+        : `Del ${a.getDate()} de ${MESES[a.getMonth()]} al ${b.getDate()} de ${MESES[b.getMonth()]}${anioSi(b)}`;
+    }
+    const d = aFecha(f);
+    return d ? `${DIAS[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}${anioSi(d)}` : f;
+  }
+
+  /** Qué tan lejos está un día del reporte elegido: "día anterior", "hace una semana"… */
+  function distancia(clave, ref) {
+    const a = aFecha(fechaDe(clave).split(" a ")[0]), b = aFecha(fechaDe(ref).split(" a ")[0]);
+    if (!a || !b) return "";
+    const dias = Math.round((b - a) / 86400000);
+    if (dias === 0) return "mismo día";
+    if (dias === 1) return "día anterior";
+    if (dias === -1) return "día siguiente";
+    if (dias === 7) return "hace una semana";
+    if (dias % 7 === 0 && dias > 0 && dias <= 56) return `hace ${dias / 7} semanas`;
+    if (dias > 0) return `hace ${dias} días`;
+    return `${-dias} días después`;
+  }
+
+  /** Nombre corto de la sucursal ("El Mexiquense - Lomas Verdes" -> "Lomas Verdes"). */
+  const sucursalCorta = (s) => (s || "").split(" - ").pop().trim();
+  const variasSucursales = () => new Set(Object.keys(estado.historial).map((k) => k.split("|")[1])).size > 1;
+
+  /** Texto de un reporte para selectores y avisos. Con ref, agrega la distancia a ese día. */
+  function etiqueta(clave, ref) {
+    const s = clave.split("|")[1];
+    let t = fechaLarga(clave);
+    if (ref) { const d = distancia(clave, ref); if (d) t += ` (${d})`; }
+    if (s && variasSucursales()) t += ` · ${sucursalCorta(s)}`;
+    return t;
   }
   const clavesOrdenadas = () => Object.keys(estado.historial).sort();
 
@@ -162,6 +206,8 @@
     const ks = clavesOrdenadas();
     if (!ks.length) {
       el.panel.hidden = true;
+      el.tableroM.hidden = true;
+      el.modo.hidden = true;
       el.controles.hidden = true;
       el.drop.classList.remove("oculto");
       el.sub.textContent = "Conteo de productos vendidos";
@@ -173,17 +219,25 @@
     }
     if (estado.comparar && !estado.historial[estado.comparar]) estado.comparar = "";
 
-    el.panel.hidden = false;
+    const meseros = estado.modo === "meseros";
+    el.panel.hidden = meseros;
+    el.tableroM.hidden = !meseros;
+    el.modo.hidden = false;
+    el.modo.setAttribute("aria-checked", String(meseros));
     el.controles.hidden = false;
     el.drop.classList.add("oculto");
     const act = reporte(estado.actual);
     const cmp = estado.comparar ? reporte(estado.comparar) : null;
-    el.sub.textContent = `${act.sucursal || "Conteo de productos"} · ${fechaCorta(estado.actual)}`;
+    el.sub.textContent = `${act.sucursal || "Conteo de productos"} · ${fechaLarga(estado.actual)}`;
 
     if (act.antiguo) mostrarError("Este reporte se guardó con una versión anterior del dashboard. Vuelve a subir el Excel para ver los productos nuevos y los desgloses.");
     else ocultarError();
 
     renderSelects(ks);
+    if (meseros) {
+      if (window.TableroMeseros) window.TableroMeseros.render(act, cmp, ks);
+      return;
+    }
     renderPanel(act, cmp);
     renderComparacion(act, cmp);
     renderTendencia(ks);
@@ -198,10 +252,12 @@
     return o;
   }
   function renderSelects(ks) {
-    el.selActual.replaceChildren(...ks.slice().reverse().map((k) => opcion(k, etiqueta(k), estado.actual)));
+    const ultimo = ks[ks.length - 1];
+    el.selActual.replaceChildren(...ks.slice().reverse().map((k) =>
+      opcion(k, etiqueta(k) + (k === ultimo && ks.length > 1 ? " (el más reciente)" : ""), estado.actual)));
     el.selComparar.replaceChildren(
       opcion("", "— Sin comparar —", estado.comparar),
-      ...ks.slice().reverse().filter((k) => k !== estado.actual).map((k) => opcion(k, etiqueta(k), estado.comparar))
+      ...ks.slice().reverse().filter((k) => k !== estado.actual).map((k) => opcion(k, etiqueta(k, estado.actual), estado.comparar))
     );
   }
 
@@ -442,7 +498,7 @@
       puntos.forEach((_, j) => { const dd = Math.abs(x(j) - lx); if (dd < best) { best = dd; i = j; } });
       guia.setAttribute("x1", x(i)); guia.setAttribute("x2", x(i)); guia.style.opacity = 1;
       const ant = i > 0 ? puntos[i - 1].v : null;
-      mostrarTip(`<b>${nombreSel}</b><br>${etiqueta(puntos[i].k).split(" · ")[0]}: <b>${num(puntos[i].v)}</b>${ant != null ? `<br>vs día anterior: ${cambio(puntos[i].v, ant).replace(/class="(sube|baja)"/, "")}` : ""}`, e);
+      mostrarTip(`<b>${nombreSel}</b><br>${fechaLarga(puntos[i].k)}: <b>${num(puntos[i].v)}</b>${ant != null ? `<br>vs día anterior: ${cambio(puntos[i].v, ant).replace(/class="(sube|baja)"/, "")}` : ""}`, e);
     });
     capa.addEventListener("mouseleave", () => { guia.style.opacity = 0; ocultarTip(); });
   }
@@ -526,6 +582,19 @@
     estado.panel = b.dataset.panel; guardarPref("panel", estado.panel);
     render();
   });
+  el.modo.addEventListener("click", () => {
+    estado.modo = estado.modo === "meseros" ? "productos" : "meseros";
+    guardarPref("modo", estado.modo);
+    ocultarTip();
+    render();
+  });
+
+  // Utilidades compartidas con el tablero de meseros (meseros.js).
+  window.Tablero = {
+    estado, reporte, clavesOrdenadas, fechaLarga, fechaCorta, num, fmt, fmtPct, esc, cambio,
+    mostrarTip, ocultarTip, pref, guardarPref, render: () => render(),
+  };
+
   el.subDatos.addEventListener("click", (e) => {
     const b = e.target.closest("[data-tabla]");
     if (!b) return;

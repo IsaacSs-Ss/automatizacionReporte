@@ -18,6 +18,13 @@
         <div class="logo">El Mexiquense</div>
         <div class="marca-sub" id="subtitulo">Conteo de productos vendidos</div>
       </div>
+      <button type="button" class="modo" id="modo" role="switch" aria-checked="false" hidden
+        title="Cambiar entre el tablero de productos y el de meseros">
+        <svg class="modo-ic modo-rep" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 17v-3M12 17v-6M16 17v-4"/></svg>
+        <span class="modo-pista"><span class="modo-bola"></span></span>
+        <svg class="modo-ic modo-per" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+        <span class="modo-texto"><span class="modo-t-rep">Productos</span><span class="modo-t-per">Meseros <span class="beta">Beta</span></span></span>
+      </button>
       <div class="controles" id="controles" hidden>
         <div class="campo">
           <label for="selActual">Reporte</label>
@@ -101,9 +108,16 @@
         </section>
       </div>
     </div>
+
+    <!-- Tablero de meseros (se llena desde meseros.js) -->
+    <div id="tableroMeseros" class="tablero" hidden>
+      <nav class="paneles paneles-m" id="mPestanas" role="tablist" aria-label="Meseros"></nav>
+      <div class="panel-cuerpo" id="mCuerpo"></div>
+    </div>
   </main>
 
   <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+  <script src="meseros.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

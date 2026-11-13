@@ -18,6 +18,16 @@ El tablero cabe en una sola pantalla y se navega con pestañas:
 - **Comparativo**: qué subió y qué bajó contra el día elegido, y la tendencia por día.
 - **Datos**: las tablas (conteo del día, historial y las líneas del Excel que se contaron).
 
+### Tablero de meseros (beta)
+
+El interruptor de arriba, junto al logo, cambia entre **Productos** y **Meseros**. El modo Meseros usa la tabla "Ventas por usuario" de la hoja 3 y separa automáticamente a los meseros de los canales (cajas, app a domicilio, Uber, Rappi):
+
+- **Desempeño**: ticket promedio, promedio por persona y personas por mesa; ticket de cada mesero comparado con quienes atendieron un número similar de mesas (pocas, medias, muchas); mapa de mesas contra ticket y venta por persona.
+- **Canales y horario**: venta por canal, forma de pago, restaurante contra para llevar, ventas y personas por hora.
+- **Historial**: días trabajados, venta y ticket promedio por mesero, y su venta día por día.
+
+El reporte solo trae dinero, cuentas y personas por mesero: **no indica qué productos vendió cada uno**, así que esa comparación no es posible con este Excel. Los reportes subidos antes de esta versión deben volver a subirse para ver los datos de meseros.
+
 ## De dónde salen los números
 
 Se usa la hoja 3 (**Resumen de Ventas**) y dos tablas:

@@ -346,3 +346,185 @@ tr.grupo td { background: var(--bg); font-weight: 700; font-size: .75rem; color:
   main { padding: 8px 10px; }
   .panel-cuerpo { padding: 8px; }
 }
+
+/* ================================================================== interruptor Productos / Meseros */
+.modo {
+  display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 10px;
+  background: #3a271d; border: 1px solid #5c4436; border-radius: 999px; cursor: pointer;
+  color: var(--brand-text); font: inherit; font-size: .85rem; font-weight: 700;
+}
+.modo:hover { border-color: var(--gold); }
+.modo:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.modo-ic { width: 18px; height: 18px; color: #8f7a6a; transition: color .2s; }
+.modo[aria-checked=false] .modo-rep, .modo[aria-checked=true] .modo-per { color: var(--gold); }
+.modo-pista { position: relative; width: 38px; height: 20px; border-radius: 999px; background: #20140e; border: 1px solid #5c4436; }
+.modo-bola {
+  position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%;
+  background: var(--gold); transition: transform .2s;
+}
+.modo[aria-checked=true] .modo-bola { transform: translateX(18px); }
+.modo-texto { min-width: 68px; text-align: left; }
+.modo[aria-checked=false] .modo-t-per, .modo[aria-checked=true] .modo-t-rep { display: none; }
+
+/* ================================================================== tablero de meseros */
+.paneles-m { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.panel-tab-nombre .icono { width: 22px; height: 22px; color: var(--gold); flex: none; }
+#mCuerpo { overflow: hidden; }
+.m-vista { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+
+.m-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; flex: none; }
+.m-kpis-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.m-kpi { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
+.m-kpi-t { font-size: .72rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.m-kpi-v { font-size: 1.6rem; font-weight: 900; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.m-kpi-d { font-size: .78rem; min-height: 1.1em; }
+
+.m-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 12px; }
+.m-grid-hist { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
+.m-col-der, .m-pila { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+.m-col-der > .m-card, .m-pila > .m-card { flex: 1 1 0; }
+.m-card { min-height: 0; background: var(--card); }
+.m-card-cuerpo { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: auto; }
+.m-grid-4 { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+
+/* ranking (meseros, canales, incidencias) */
+.m-ranking { display: flex; flex-direction: column; flex: 1; justify-content: space-around; }
+.m-rk { display: grid; grid-template-columns: 22px minmax(110px, 160px) 1fr 82px 54px; gap: 10px; align-items: center; padding: 3px 0; font-size: .85rem; }
+.m-pila .m-rk { grid-template-columns: minmax(100px, 150px) 1fr 82px 70px; }
+.m-grid-4 .m-rk { grid-template-columns: minmax(80px, 1fr) 1fr 74px; }
+.m-rk-pos { color: var(--muted); font-weight: 900; text-align: right; }
+.m-rk-nombre { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m-rk-pista { height: 12px; background: var(--track); border-radius: 4px; overflow: hidden; }
+.m-rk-b { display: block; height: 100%; background: var(--gold); border-radius: 4px; }
+.m-top .m-rk-b { background: var(--accent); }
+.m-top .m-rk-nombre { font-weight: 900; }
+.m-rk-inc { background: var(--baja); }
+.m-rk-valor { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.m-rk-mov { text-align: right; font-size: .75rem; white-space: nowrap; }
+.m-rk:hover .m-rk-b { filter: brightness(1.15); }
+.m-nuevo { font-size: .7rem; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 0 6px; }
+
+/* svg comunes */
+.m-svg { width: 100%; height: 100%; min-height: 0; display: block; overflow: visible; }
+.m-svg-tira { height: auto; max-height: 110px; }
+.m-grid-l line { stroke: var(--line); }
+.m-svg text { fill: var(--muted); font-size: 11px; font-family: inherit; }
+.m-med { stroke: var(--muted); stroke-dasharray: 4 4; opacity: .6; }
+.m-svg .m-cuad { fill: var(--muted); font-size: 10.5px; font-style: italic; opacity: .85; }
+.m-pt { fill: color-mix(in srgb, var(--gold) 55%, transparent); stroke: var(--card); stroke-width: 2; }
+.m-pt-top { fill: var(--accent); }
+.m-pt:hover, .m-pp:hover { stroke: var(--text); }
+.m-svg .m-pt-lbl { fill: var(--text); font-size: 11px; font-weight: 700; }
+.m-base { stroke: var(--line); stroke-width: 2; }
+.m-prom { stroke: var(--text); stroke-width: 2; stroke-dasharray: 3 3; }
+.m-svg .m-prom-t, .m-svg .m-tira-t { fill: var(--text); font-weight: 700; }
+.m-pp { fill: var(--baja); stroke: var(--card); stroke-width: 2; }
+.m-pp-arriba { fill: var(--sube); }
+.m-linea { fill: none; stroke: var(--accent); stroke-width: 2.5; }
+.m-linea-prom { fill: none; stroke: var(--muted); stroke-width: 2; stroke-dasharray: 5 4; }
+.m-svg .m-falta { fill: var(--muted); font-style: italic; }
+
+.m-ley { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: .78rem; color: var(--muted); margin-top: 6px; flex: none; }
+.m-ley span { display: inline-flex; align-items: center; gap: 6px; }
+.m-ley-arriba { background: var(--sube); border-radius: 50%; }
+.m-ley-abajo { background: var(--baja); border-radius: 50%; }
+.m-ley-linea { display: inline-block; width: 18px; height: 0; border-top: 2.5px solid var(--accent); }
+.m-ley-prom { border-top: 2px dashed var(--muted); }
+.m-ley-marca { display: inline-block; width: 16px; height: 0; border-top: 2px solid var(--text); }
+
+/* columnas por hora */
+.m-cols { flex: 1; min-height: 120px; display: flex; gap: 6px; align-items: stretch; }
+.m-colw { flex: 1; display: flex; flex-direction: column; align-items: center; min-width: 0; }
+.m-colv { font-size: .72rem; font-weight: 900; height: 16px; white-space: nowrap; }
+.m-colz { position: relative; flex: 1; width: 100%; display: flex; align-items: flex-end; }
+.m-colb { width: 100%; background: var(--gold); border-radius: 4px 4px 0 0; min-height: 2px; }
+.m-pico { background: var(--accent); }
+.m-colp { position: absolute; left: -2px; right: -2px; height: 0; border-top: 2px solid var(--text); }
+.m-colh { font-size: .7rem; color: var(--muted); margin-top: 4px; white-space: nowrap; }
+.m-colw:hover .m-colb { filter: brightness(1.15); }
+
+/* forma de pago y tipo de orden */
+.m-barra100 { display: flex; gap: 2px; height: 20px; margin-bottom: 10px; flex: none; }
+.m-barra100 div:first-child { border-radius: 6px 0 0 6px; }
+.m-barra100 div:last-child { border-radius: 0 6px 6px 0; }
+.m-pagos { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 4px 16px; }
+.m-pago { display: flex; align-items: baseline; gap: 8px; font-size: .85rem; }
+.m-pago > span:first-child { display: inline-flex; align-items: center; gap: 6px; margin-right: auto; }
+.m-ords { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.m-ord-t { font-size: .72rem; font-weight: 700; text-transform: uppercase; color: var(--muted); letter-spacing: .05em; }
+.m-ord-v { font-size: 1.4rem; font-weight: 900; }
+
+/* tabla del historial */
+.m-tabla tbody tr { cursor: pointer; }
+.m-tabla tbody tr:hover td { background: var(--track); }
+.m-tabla tr.m-sel td { background: color-mix(in srgb, var(--gold) 18%, transparent); font-weight: 700; }
+
+@media (max-width: 1000px) {
+  .m-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .m-grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .modo-texto { display: none; }
+}
+@media (max-width: 600px) {
+  .m-kpis, .m-kpis-4, .m-grid, .m-grid-4 { grid-template-columns: 1fr; }
+  .paneles-m { grid-template-columns: 1fr 1fr; }
+  #mCuerpo { overflow: visible; }
+}
+
+/* pantallas bajas: tablero de meseros más compacto */
+@media (max-height: 820px) {
+  .m-vista { gap: 8px; }
+  .m-kpi { padding: 6px 12px; }
+  .m-kpi-v { font-size: 1.3rem; }
+  .m-rk { padding: 0; font-size: .8rem; gap: 8px; }
+  .m-rk-pista { height: 10px; }
+  .m-card { padding: 8px 12px; }
+  .m-card .tarjeta-head { margin-bottom: 4px; }
+  .m-col-der, .m-pila, .m-grid { gap: 8px; }
+}
+/* encabezado en una sola línea en laptops */
+@media (max-width: 1450px) {
+  .marca select { max-width: 250px; }
+  .marca-in { gap: 8px 14px; }
+}
+.marca-sub { max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m-pila > .m-card:first-child { flex: 1.7 1 0; }
+@media (max-width: 1450px) {
+  .marca-sub { max-width: 240px; }
+  .marca select { max-width: 225px; }
+}
+
+/* ticket por grupos de mesas similares */
+.m-grupos { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 8px; }
+.m-grupo-head { font-size: .82rem; padding: 4px 0 2px; border-bottom: 1px solid var(--line); margin-bottom: 2px; }
+.m-grupo-head b { color: var(--gold); text-transform: uppercase; letter-spacing: .05em; font-size: .75rem; margin-right: 6px; }
+.m-tk { display: grid; grid-template-columns: minmax(110px, 150px) 62px 1fr 70px 44px; gap: 8px; align-items: center; padding: 2px 0; font-size: .84rem; }
+.m-tk-nombre { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m-tk-mesas { font-size: .75rem; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.m-tk-pista { position: relative; height: 12px; background: var(--track); border-radius: 4px; }
+.m-tk-b { position: absolute; left: 0; top: 0; bottom: 0; background: var(--gold); border-radius: 4px; }
+.m-top .m-tk-b { background: var(--accent); }
+.m-top .m-tk-nombre { font-weight: 900; }
+.m-tk-ref { position: absolute; top: -3px; bottom: -3px; width: 0; border-left: 2px solid var(--text); }
+.m-tk-valor { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.m-tk-dif { text-align: right; font-size: .78rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.m-tk:hover .m-tk-b { filter: brightness(1.15); }
+
+.m-franja { fill: color-mix(in srgb, var(--gold) 6%, transparent); }
+.m-franja-b { fill: color-mix(in srgb, var(--gold) 12%, transparent); }
+.m-svg .m-franja-t { fill: var(--gold); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.m-franja-prom { stroke: var(--text); stroke-width: 2; stroke-dasharray: 4 3; }
+.m-pt-arriba { fill: var(--sube); }
+.m-pt-abajo { fill: var(--baja); }
+
+@media (max-height: 820px) {
+  .m-tk { padding: 0; font-size: .78rem; }
+  .m-grupo-head { padding: 2px 0 1px; }
+  .m-grupos { gap: 4px; }
+}
+
+/* etiqueta Beta del modo Meseros */
+.beta {
+  display: inline-block; margin-left: 4px; padding: 1px 6px; border-radius: 999px;
+  background: var(--gold); color: var(--brand); font-size: .62rem; font-weight: 900;
+  letter-spacing: .06em; text-transform: uppercase; vertical-align: middle;
+}

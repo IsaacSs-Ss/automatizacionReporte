@@ -183,6 +183,102 @@
     return out;
   }
 
+  // ---------------------------------------------------------------------------
+  // Datos para el tablero de meseros (opcionales: si algo falta, se omite)
+  // ---------------------------------------------------------------------------
+
+  /** Lee una tabla de la hoja 3 y devuelve filas como arreglos en el orden de `columnas`. */
+  function leerTabla(filas, reTitulo, columnas) {
+    const t = ubicarTabla(filas, reTitulo, columnas);
+    if (!t) return [];
+    const claves = Object.keys(columnas);
+    const out = [];
+    let vacias = 0;
+    for (let r = t.filaEncabezado + 1; r < filas.length; r++) {
+      const fila = filas[r] || [];
+      const primero = fila[t.cols[claves[0]]];
+      if (primero == null || primero === "") {
+        if (++vacias > 2) break;
+        continue;
+      }
+      vacias = 0;
+      out.push(claves.map((k, i) => {
+        const v = fila[t.cols[k]];
+        return i === 0 ? String(v).trim() : Number(v) || 0;
+      }));
+    }
+    return out;
+  }
+
+  /** Hojas de incidencias: columnas "Mesero | Subtotal" por orden y por platillo. */
+  function leerIncidencia(XLSX, wb, reHoja) {
+    const nombre = wb.SheetNames.find((n) => reHoja.test(normalizar(n)));
+    if (!nombre) return [];
+    const filas = aMatriz(XLSX, wb.Sheets[nombre]);
+    for (let r = 0; r < Math.min(filas.length, 60); r++) {
+      const fila = filas[r] || [];
+      const colsMesero = fila.map((v, i) => (normalizar(v) === "MESERO" ? i : -1)).filter((i) => i >= 0);
+      if (!colsMesero.length) continue;
+      const out = [];
+      colsMesero.forEach((c, j) => {
+        const tipo = j === 0 ? "orden" : "platillo";
+        for (let k = r + 1; k < filas.length; k++) {
+          const m = (filas[k] || [])[c];
+          if (m == null || m === "") break;
+          out.push([String(m).trim(), Number((filas[k] || [])[c + 1]) || 0, tipo]);
+        }
+      });
+      return out;
+    }
+    return [];
+  }
+
+  function leerOcupacion(XLSX, wb) {
+    const nombre = wb.SheetNames.find((n) => /OCUPACI/.test(normalizar(n)));
+    if (!nombre) return [];
+    const filas = aMatriz(XLSX, wb.Sheets[nombre]);
+    for (let r = 0; r < Math.min(filas.length, 60); r++) {
+      const fila = filas[r] || [];
+      const c = fila.findIndex((v) => normalizar(v) === "HORA");
+      if (c < 0 || normalizar(fila[c + 1]) !== "PERSONAS") continue;
+      const out = [];
+      for (let k = r + 1; k < filas.length; k++) {
+        const h = (filas[k] || [])[c];
+        if (h == null || h === "") break;
+        out.push([String(h).trim(), Number(filas[k][c + 1]) || 0]);
+      }
+      return out;
+    }
+    return [];
+  }
+
+  function leerExtra(XLSX, wb, filas) {
+    try {
+      return {
+        // [nombre, subtotal, total, cuentas, personas]
+        usuarios: leerTabla(filas, /^VENTAS POR USUARIO/, {
+          usuario: /^USUARIO$/, subtotal: /^SUBTOTAL$/, total: /^TOTAL$/, cuentas: /^NO\.? CUENTAS$/, personas: /^NO\.? PERSONAS$/,
+        }),
+        horas: leerTabla(filas, /^VENTAS POR HORA/, { hora: /^HORA$/, monto: /^MONTO$/ }),
+        pagos: leerTabla(filas, /^VENTAS POR TIPO DE PAGO/, { pago: /^PAGO$/, total: /^TOTAL$/ })
+          .filter(([n]) => !/IVA/.test(normalizar(n))),
+        // [tipo, personas, cuentas, subtotal]
+        ordenes: leerTabla(filas, /^VENTAS POR TIPO DE ORDEN/, {
+          tipo: /^TIPO$/, personas: /^PERSONAS$/, cuentas: /^CUENTAS$/, subtotal: /^SUBTOTAL$/,
+        }),
+        ocupacion: leerOcupacion(XLSX, wb),
+        incidencias: {
+          cortesias: leerIncidencia(XLSX, wb, /^CORTES/),
+          descuentos: leerIncidencia(XLSX, wb, /^DESCUENTO/),
+          cancelaciones: leerIncidencia(XLSX, wb, /^CANCELACI/),
+          anulaciones: leerIncidencia(XLSX, wb, /^ANULACI/),
+        },
+      };
+    } catch (e) {
+      return null;
+    }
+  }
+
   function leerFecha(XLSX, wb, nombreArchivo) {
     // 1) "Del 2026-10-04 al 2026-10-04" en la primera hoja
     try {
@@ -245,6 +341,7 @@
     const crudo = {
       platillos: leerFilas(filas, tablaPlatillos).filter((f) => f.cantidad).map(recortar),
       modificadores: leerFilas(filas, tablaModificadores).filter((f) => f.cantidad).map(recortar),
+      extra: leerExtra(XLSX, wb, filas),
     };
 
     return Object.assign(
