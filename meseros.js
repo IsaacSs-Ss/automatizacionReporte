@@ -58,7 +58,7 @@
     const nav = $("mPestanas"), cuerpo = $("mCuerpo");
     nav.innerHTML = PESTANAS.map((p) =>
       `<button type="button" class="panel-tab extra" role="tab" data-mtab="${p.id}" aria-selected="${p.id === pestana}">
-        <span class="panel-tab-in"><span class="panel-tab-nombre">${icono(p.icono)}${p.nombre}</span></span></button>`).join("");
+        <span class="panel-tab-in"><span class="panel-tab-nombre">${icono(p.icono)}${p.nombre}${p.id === "desempeno" ? `<span class="beta">Beta</span>` : ""}</span></span></button>`).join("");
 
     const d = datos(act);
     if (!d) {

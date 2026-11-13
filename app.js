@@ -61,8 +61,8 @@
     bloques: $("bloques"), paneles: $("paneles"), controles: $("controles"),
     modo: $("modo"), tableroM: $("tableroMeseros"),
     vistaPanel: $("vistaPanel"), vistaComp: $("vistaComparativo"), vistaDatos: $("vistaDatos"), subDatos: $("subDatos"),
-    secComp: $("secComparacion"), notaComp: $("notaComparacion"), grafComp: $("graficaComparacion"),
-    secTend: $("secTendencia"), selTend: $("selTendencia"), grafTend: $("graficaTendencia"),
+    anCats: $("anCats"), anNota: $("anNota"), anLista: $("anLista"),
+    anTitulo: $("anTitulo"), anValor: $("anValor"), anGrafica: $("anGrafica"), anPie: $("anPie"),
     tabla: $("tabla"), tablaHist: $("tablaHistorial"), notaHist: $("notaHistorial"), tablaDet: $("tablaDetalle"),
     btnExp: $("btnExportar"), inpImp: $("inpImportar"), tip: $("tooltip"),
   };
@@ -71,6 +71,8 @@
     historial: cargarHistorial(), actual: null, comparar: "", tendencia: "tacos-dorados",
     panel: PANELES[pref("panel")] || PESTANAS_EXTRA[pref("panel")] ? pref("panel") : "bebidas",
     tablaDatos: "tabla",
+    catAnalisis: pref("catAnalisis", ""),
+    prodAnalisis: "",
     modo: pref("modo") === "meseros" ? "meseros" : "productos",
   };
   const cache = new Map();
@@ -224,6 +226,7 @@
     el.tableroM.hidden = !meseros;
     el.modo.hidden = false;
     el.modo.setAttribute("aria-checked", String(meseros));
+    el.modo.setAttribute("aria-label", meseros ? "Cambiar al tablero de productos" : "Cambiar al tablero de meseros");
     el.controles.hidden = false;
     el.drop.classList.add("oculto");
     const act = reporte(estado.actual);
@@ -239,8 +242,7 @@
       return;
     }
     renderPanel(act, cmp);
-    renderComparacion(act, cmp);
-    renderTendencia(ks);
+    renderAnalisis(act, cmp, ks);
     renderTabla(act, cmp);
     renderHistorial(ks);
     renderDetalle(act);
@@ -274,8 +276,8 @@
     if (previo == null) return "";
     const d = actual - previo;
     if (Math.abs(d) < 0.001) return chip ? `<span class="chip">= igual</span>` : `<span class="nota">= igual</span>`;
-    const pct = previo ? ` · ${d > 0 ? "+" : ""}${fmtPct.format((d / previo) * 100)}%` : " · nuevo";
-    const txt = `${d > 0 ? "▲ +" : "▼ "}${num(d)}${pct}`;
+    const pct = previo ? ` · ${d > 0 ? "+" : "−"}${fmtPct.format(Math.abs((d / previo) * 100))}%` : " · nuevo";
+    const txt = `${d > 0 ? "▲ +" : "▼ −"}${num(Math.abs(d))}${pct}`;
     return chip
       ? `<span class="chip"><span class="${d > 0 ? "fl-sube" : "fl-baja"}">${txt}</span></span>`
       : `<span class="${d > 0 ? "sube" : "baja"}">${txt}</span>`;
@@ -418,89 +420,125 @@
       <div class="partes">${partes}</div><div class="partes-ley">${ley}</div></div>`;
   }
 
-  // ---------------------------------------------------------------- comparación
-  function renderComparacion(act, cmp) {
-    if (!cmp) {
-      el.notaComp.textContent = "";
-      el.grafComp.innerHTML = `<p class="vacio">Elige un día en <b>Comparar contra</b> (arriba) para ver qué subió y qué bajó.</p>`;
-      return;
+  // ---------------------------------------------------------------- análisis por producto
+  /**
+   * Comparativo: botones por categoría (con foto); a la izquierda qué subió y qué
+   * bajó en esa categoría, a la derecha la tendencia del producto seleccionado.
+   */
+  function renderAnalisis(act, cmp, ks) {
+    const cats = CATEGORIAS.concat(["Todas"]);
+    if (!cats.includes(estado.catAnalisis)) estado.catAnalisis = CATEGORIAS[0];
+    const prev = cmp ? mapa(cmp) : null;
+
+    // Botones de categoría: foto a la derecha, total y cambio
+    el.anCats.innerHTML = cats.map((cat) => {
+      const info = CAT_INFO[cat] || {};
+      const total = cat === "Todas" ? null : sumaCat(act, cat);
+      const ch = cmp && total != null ? cambio(total, sumaCat(cmp, cat)).replace(/ · .*?</, "<") : "";
+      return `<button type="button" class="an-cat" data-cat="${esc(cat)}" aria-pressed="${cat === estado.catAnalisis}">
+        ${info.img ? imagen(info.img, cat) : ""}
+        <span class="an-cat-in">
+          <span class="an-cat-n">${cat}</span>
+          <span class="an-cat-v">${total != null ? num(total) : act.productos.length} <span class="an-cat-d">${total != null ? ch : "productos"}</span></span>
+        </span>
+      </button>`;
+    }).join("");
+
+    // Productos de la categoría
+    const lista = act.productos.filter((p) => estado.catAnalisis === "Todas" || p.categoria === estado.catAnalisis);
+    if (!lista.some((p) => p.id === estado.prodAnalisis)) {
+      estado.prodAnalisis = [...lista].sort((a, b) => b.total - a.total)[0].id;
     }
-    el.notaComp.textContent = `${fechaCorta(estado.actual)} contra ${fechaCorta(estado.comparar)} · % de cambio`;
-    const prev = mapa(cmp);
-    const filas = act.productos.map((p) => {
-      const antes = prev[p.id] ? prev[p.id].total : 0;
-      const d = p.total - antes;
-      const pct = antes ? (d / antes) * 100 : (p.total ? 100 : 0);
-      return { p, antes, d, pct };
-    }).sort((a, b) => b.pct - a.pct);
-    const max = Math.max(10, ...filas.map((f) => Math.abs(f.pct)));
-    el.grafComp.innerHTML = filas.map(({ p, antes, d, pct }) => {
-      const w = (Math.abs(pct) / max) * 100;
-      const tip = esc(`<b>${p.nombre}</b><br>${fechaCorta(estado.comparar)}: ${num(antes)}<br>${fechaCorta(estado.actual)}: ${num(p.total)}<br>Cambio: <b>${d > 0 ? "+" : ""}${num(d)}</b>`);
-      const etiquetaPct = antes ? `${pct > 0 ? "+" : ""}${fmtPct.format(pct)}%` : (p.total ? "nuevo" : "—");
-      return `<div class="dv-nombre">${p.nombre}</div>
-        <div class="dv-izq" data-tip="${tip}">${pct < 0 ? `<div class="b" style="width:calc(${w}% - 2px)"></div>` : ""}</div>
-        <div class="dv-der" data-tip="${tip}">${pct > 0 ? `<div class="b" style="width:calc(${w}% - 2px)"></div>` : ""}</div>
-        <div class="dv-valor ${d > 0 ? "sube" : d < 0 ? "baja" : ""}">${d > 0 ? "▲" : d < 0 ? "▼" : "="} ${etiquetaPct}</div>`;
-    }).join("") + `<div></div><div class="dv-eje"><span>−${fmtPct.format(max)}% bajó</span><span>subió +${fmtPct.format(max)}%</span></div>`;
+
+    // Izquierda: qué subió y qué bajó (o, sin comparación, lo vendido)
+    if (cmp) {
+      el.anNota.textContent = `${fechaCorta(estado.actual)} contra ${fechaCorta(estado.comparar)} · clic para ver su tendencia`;
+      const filas = lista.map((p) => {
+        const antes = prev[p.id] ? prev[p.id].total : 0;
+        const d = p.total - antes;
+        const pct = antes ? (d / antes) * 100 : (p.total ? 100 : 0);
+        return { p, antes, d, pct };
+      }).sort((a, b) => b.pct - a.pct);
+      const max = Math.max(10, ...filas.map((f) => Math.abs(f.pct)));
+      el.anLista.classList.remove("an-sin-cmp");
+      el.anLista.innerHTML = filas.map(({ p, antes, d, pct }) => {
+        const w = (Math.abs(pct) / max) * 100;
+        const sel = p.id === estado.prodAnalisis ? " an-sel" : "";
+        const tip = esc(`<b>${p.nombre}</b><br>${fechaCorta(estado.comparar)}: ${num(antes)}<br>${fechaCorta(estado.actual)}: ${num(p.total)}<br>Cambio: <b>${d > 0 ? "+" : d < 0 ? "−" : ""}${num(Math.abs(d))}</b>`);
+        const etq = antes ? `${pct > 0 ? "+" : pct < 0 ? "−" : ""}${fmtPct.format(Math.abs(pct))}%` : (p.total ? "nuevo" : "—");
+        return `<div class="dv-fila${sel}" data-prod="${p.id}" data-tip="${tip}">
+          <div class="dv-nombre">${p.nombre}</div>
+          <div class="dv-izq">${pct < 0 ? `<div class="b" style="width:calc(${w}% - 2px)"></div>` : ""}</div>
+          <div class="dv-der">${pct > 0 ? `<div class="b" style="width:calc(${w}% - 2px)"></div>` : ""}</div>
+          <div class="dv-valor ${d > 0 ? "sube" : d < 0 ? "baja" : ""}">${d > 0 ? "▲" : d < 0 ? "▼" : "="} ${etq}</div>
+        </div>`;
+      }).join("") + `<div class="dv-fila dv-pie"><div></div><div class="dv-eje"><span>−${fmtPct.format(max)}% bajó</span><span>subió +${fmtPct.format(max)}%</span></div></div>`;
+    } else {
+      el.anNota.textContent = "elige un día en Comparar contra para ver qué subió y qué bajó";
+      const orden = [...lista].sort((a, b) => b.total - a.total);
+      const max = Math.max(1, ...orden.map((p) => p.total));
+      el.anLista.classList.add("an-sin-cmp");
+      el.anLista.innerHTML = orden.map((p) => `
+        <div class="dv-fila${p.id === estado.prodAnalisis ? " an-sel" : ""}" data-prod="${p.id}">
+          <div class="dv-nombre">${p.nombre}</div>
+          <div class="an-pista"><div class="an-b" style="width:${(p.total / max) * 100}%"></div></div>
+          <div class="dv-valor">${num(p.total)}</div>
+        </div>`).join("");
+    }
+
+    renderTendenciaProducto(act, cmp, ks);
   }
 
-  // ---------------------------------------------------------------- tendencia
-  function renderTendencia(ks) {
-    if (ks.length < 2) {
-      el.selTend.hidden = true;
-      el.grafTend.innerHTML = `<p class="vacio">Sube al menos dos días para ver la tendencia.</p>`;
+  /** Derecha: tendencia del producto seleccionado, dibujada al tamaño de su espacio. */
+  function renderTendenciaProducto(act, cmp, ks) {
+    const p = act.productos.find((x) => x.id === estado.prodAnalisis);
+    if (!p) return;
+    const pts = ks.map((k) => { const m = mapa(reporte(k)); return { k, v: m[p.id] ? m[p.id].total : 0 }; });
+    const unidad = p.unidad && p.unidad !== "unidades" ? ` <span class="nota">${p.unidad}</span>` : "";
+    el.anTitulo.innerHTML = `${p.nombre}${unidad}`;
+    el.anValor.innerHTML = `<b>${num(p.total)}</b> ${cmp ? cambio(p.total, mapa(cmp)[p.id] ? mapa(cmp)[p.id].total : 0) : ""}`;
+
+    if (pts.length < 2) {
+      el.anGrafica.innerHTML = `<p class="vacio">Sube al menos dos días para ver la tendencia.</p>`;
+      el.anPie.innerHTML = "";
       return;
     }
-    el.selTend.hidden = false;
-    // Selector: categorías completas y cada producto.
-    const opciones = [];
-    for (const cat of CATEGORIAS) {
-      const g = document.createElement("optgroup");
-      g.label = cat;
-      g.append(opcion("cat:" + cat, `Total ${cat.toLowerCase()}`, estado.tendencia));
-      P.PRODUCTOS.filter((p) => p.categoria === cat).forEach((p) => g.append(opcion(p.id, p.nombre, estado.tendencia)));
-      opciones.push(g);
-    }
-    el.selTend.replaceChildren(...opciones);
+    const vals = pts.map((x) => x.v);
+    const prom = vals.reduce((s, v) => s + v, 0) / vals.length;
+    const iMax = vals.indexOf(Math.max(...vals)), iMin = vals.indexOf(Math.min(...vals));
 
-    const sel = estado.tendencia;
-    const puntos = ks.map((k) => {
-      const r = reporte(k);
-      const v = sel.startsWith("cat:") ? sumaCat(r, sel.slice(4)) : (mapa(r)[sel] || { total: 0 }).total;
-      return { k, v };
-    });
-    const W = 760, H = 240, m = { l: 44, r: 16, t: 14, b: 30 };
+    const W = Math.max(320, el.anGrafica.clientWidth || 640), H = Math.max(180, el.anGrafica.clientHeight || 300);
+    const m = { l: 48, r: 18, t: 22, b: 28 };
     const iw = W - m.l - m.r, ih = H - m.t - m.b;
-    const maxV = Math.max(1, ...puntos.map((p) => p.v));
+    const maxV = Math.max(...vals, 1);
     const paso = Math.pow(10, Math.floor(Math.log10(maxV)));
-    const tope = Math.ceil(maxV / paso) * paso;
-    const x = (i) => m.l + (puntos.length === 1 ? iw / 2 : (i / (puntos.length - 1)) * iw);
-    const y = (v) => m.t + ih - (v / tope) * ih;
+    const tope = Math.ceil((maxV * 1.1) / paso) * paso;
+    const X = (i) => m.l + (i / (pts.length - 1)) * iw;
+    const Y = (v) => m.t + ih - (v / tope) * ih;
     const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => tope * f);
-    const cada = Math.ceil(puntos.length / 8); // no más de ~8 fechas en el eje
-    const svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Tendencia">
-      <g class="grid">${ticks.map((t) => `<line x1="${m.l}" x2="${W - m.r}" y1="${y(t)}" y2="${y(t)}"/><text x="${m.l - 6}" y="${y(t) + 4}" text-anchor="end">${fmt.format(t)}</text>`).join("")}</g>
-      ${puntos.map((p, i) => i % cada === 0 || i === puntos.length - 1 ? `<text x="${x(i)}" y="${H - 8}" text-anchor="middle">${fechaCorta(p.k)}</text>` : "").join("")}
-      <polyline class="linea" points="${puntos.map((p, i) => `${x(i)},${y(p.v)}`).join(" ")}"/>
-      <line class="guia" id="tGuia" y1="${m.t}" y2="${m.t + ih}" x1="${m.l}" x2="${m.l}" style="opacity:0"/>
-      ${puntos.map((p, i) => `<circle class="pt" cx="${x(i)}" cy="${y(p.v)}" r="${p.k === estado.actual ? 6 : 4}"/>`).join("")}
-      <rect id="tCapa" x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent"/>
+    const cada = Math.ceil(pts.length / Math.max(2, Math.floor(iw / 90)));
+    const linea = pts.map((x, i) => `${X(i)},${Y(x.v)}`).join(" ");
+    const area = `${X(0)},${m.t + ih} ${linea} ${X(pts.length - 1)},${m.t + ih}`;
+    const puntos = pts.map((x, i) => {
+      const esAct = x.k === estado.actual, esCmp = x.k === estado.comparar;
+      const dif = i > 0 ? x.v - pts[i - 1].v : null;
+      const tip = esc(`<b>${p.nombre}</b><br>${fechaLarga(x.k)}: <b>${num(x.v)}</b>${dif != null ? `<br>vs día anterior: ${dif > 0 ? "+" : dif < 0 ? "−" : ""}${num(Math.abs(dif))}` : ""}`);
+      return `<circle class="an-pt ${esAct ? "an-pt-act" : ""} ${esCmp ? "an-pt-cmp" : ""}" cx="${X(i)}" cy="${Y(x.v)}" r="${esAct ? 6 : esCmp ? 5.5 : 4}"/>
+        <circle class="an-hit" cx="${X(i)}" cy="${Y(x.v)}" r="14" data-tip="${tip}"/>
+        ${(esAct || i === iMax || i === iMin) ? `<text class="an-etq" x="${X(i)}" y="${Y(x.v) - 10}" text-anchor="${i === 0 ? "start" : i === pts.length - 1 ? "end" : "middle"}">${num(x.v)}</text>` : ""}`;
+    }).join("");
+    el.anGrafica.innerHTML = `<svg class="an-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Tendencia de ${esc(p.nombre)}">
+      <g class="an-ejes">${ticks.map((t) => `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(t)}" y2="${Y(t)}"/><text x="${m.l - 8}" y="${Y(t) + 4}" text-anchor="end">${fmt.format(t)}</text>`).join("")}</g>
+      ${pts.map((x, i) => (i % cada === 0 || i === pts.length - 1) ? `<text class="an-x" x="${X(i)}" y="${H - 6}" text-anchor="${i === 0 ? "start" : i === pts.length - 1 ? "end" : "middle"}">${fechaCorta(x.k)}</text>` : "").join("")}
+      <line class="an-prom" x1="${m.l}" x2="${W - m.r}" y1="${Y(prom)}" y2="${Y(prom)}"/>
+      <polygon class="an-area" points="${area}"/>
+      <polyline class="an-linea" points="${linea}"/>
+      ${puntos}
     </svg>`;
-    el.grafTend.innerHTML = svg;
-    const capa = el.grafTend.querySelector("#tCapa"), guia = el.grafTend.querySelector("#tGuia");
-    const svgEl = el.grafTend.querySelector("svg");
-    const nombreSel = sel.startsWith("cat:") ? `Total ${sel.slice(4).toLowerCase()}` : P.PRODUCTOS.find((p) => p.id === sel).nombre;
-    capa.addEventListener("mousemove", (e) => {
-      const pt = svgEl.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
-      const lx = pt.matrixTransform(svgEl.getScreenCTM().inverse()).x;
-      let i = 0, best = Infinity;
-      puntos.forEach((_, j) => { const dd = Math.abs(x(j) - lx); if (dd < best) { best = dd; i = j; } });
-      guia.setAttribute("x1", x(i)); guia.setAttribute("x2", x(i)); guia.style.opacity = 1;
-      const ant = i > 0 ? puntos[i - 1].v : null;
-      mostrarTip(`<b>${nombreSel}</b><br>${fechaLarga(puntos[i].k)}: <b>${num(puntos[i].v)}</b>${ant != null ? `<br>vs día anterior: ${cambio(puntos[i].v, ant).replace(/class="(sube|baja)"/, "")}` : ""}`, e);
-    });
-    capa.addEventListener("mouseleave", () => { guia.style.opacity = 0; ocultarTip(); });
+    el.anPie.innerHTML = `<span>Promedio <b>${num(Math.round(prom * 10) / 10)}</b></span>
+      <span>Máximo <b>${num(vals[iMax])}</b> · ${fechaCorta(pts[iMax].k)}</span>
+      <span>Mínimo <b>${num(vals[iMin])}</b> · ${fechaCorta(pts[iMin].k)}</span>
+      <span class="an-ley"><i class="an-ley-act"></i>reporte <i class="an-ley-cmp"></i>comparado <i class="an-ley-prom"></i>promedio</span>`;
   }
 
   // ---------------------------------------------------------------- tablas
@@ -601,9 +639,28 @@
     estado.tablaDatos = b.dataset.tabla;
     render();
   });
-  el.selTend.onchange = () => { estado.tendencia = el.selTend.value; renderTendencia(clavesOrdenadas()); };
+  el.anLista.addEventListener("click", (e) => {
+    const f = e.target.closest("[data-prod]");
+    if (!f) return;
+    estado.prodAnalisis = f.dataset.prod;
+    for (const x of el.anLista.querySelectorAll("[data-prod]")) x.classList.toggle("an-sel", x === f);
+    renderTendenciaProducto(reporte(estado.actual), estado.comparar ? reporte(estado.comparar) : null, clavesOrdenadas());
+  });
+  el.anCats.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-cat]");
+    if (!b) return;
+    estado.catAnalisis = b.dataset.cat;
+    guardarPref("catAnalisis", estado.catAnalisis);
+    render();
+  });
   let tResize;
-  window.addEventListener("resize", () => { clearTimeout(tResize); tResize = setTimeout(ajustarColumnas, 120); });
+  window.addEventListener("resize", () => {
+    clearTimeout(tResize);
+    tResize = setTimeout(() => {
+      ajustarColumnas();
+      if (!el.vistaComp.hidden && estado.actual) renderAnalisis(reporte(estado.actual), estado.comparar ? reporte(estado.comparar) : null, clavesOrdenadas());
+    }, 150);
+  });
 
   // Tooltips de barras (cualquier elemento con data-tip)
   document.addEventListener("mousemove", (e) => {

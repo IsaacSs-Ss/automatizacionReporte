@@ -19,11 +19,10 @@
         <div class="marca-sub" id="subtitulo">Conteo de productos vendidos</div>
       </div>
       <button type="button" class="modo" id="modo" role="switch" aria-checked="false" hidden
-        title="Cambiar entre el tablero de productos y el de meseros">
-        <svg class="modo-ic modo-rep" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 17v-3M12 17v-6M16 17v-4"/></svg>
-        <span class="modo-pista"><span class="modo-bola"></span></span>
-        <svg class="modo-ic modo-per" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
-        <span class="modo-texto"><span class="modo-t-rep">Productos</span><span class="modo-t-per">Meseros <span class="beta">Beta</span></span></span>
+        aria-label="Cambiar al tablero de meseros" title="Productos / Meseros">
+        <span class="modo-bola" aria-hidden="true"></span>
+        <svg class="modo-ic modo-rep" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 17v-3M12 17v-6M16 17v-4"/></svg>
+        <svg class="modo-ic modo-per" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
       </button>
       <div class="controles" id="controles" hidden>
         <div class="campo">
@@ -73,20 +72,24 @@
         </section>
 
         <!-- Comparativo -->
-        <section id="vistaComparativo" class="vista comparativo" hidden>
-          <div class="tarjeta" id="secComparacion">
-            <div class="tarjeta-head">
-              <h2>¿Qué subió y qué bajó?</h2>
-              <span class="nota" id="notaComparacion"></span>
+        <section id="vistaComparativo" class="vista analisis" hidden>
+          <div class="an-cats" id="anCats" role="group" aria-label="Categoría"></div>
+          <div class="comparativo">
+            <div class="tarjeta">
+              <div class="tarjeta-head">
+                <h2>¿Qué subió y qué bajó?</h2>
+                <span class="nota" id="anNota"></span>
+              </div>
+              <div id="anLista" class="divergente"></div>
             </div>
-            <div id="graficaComparacion" class="divergente"></div>
-          </div>
-          <div class="tarjeta" id="secTendencia">
-            <div class="tarjeta-head">
-              <h2>Tendencia por día</h2>
-              <select id="selTendencia" aria-label="Producto"></select>
+            <div class="tarjeta">
+              <div class="tarjeta-head">
+                <h2 id="anTitulo">Tendencia por día</h2>
+                <span class="an-valor-t" id="anValor"></span>
+              </div>
+              <div id="anGrafica" class="tendencia an-tendencia"></div>
+              <div class="an-pie" id="anPie"></div>
             </div>
-            <div id="graficaTendencia" class="tendencia"></div>
           </div>
         </section>
 
