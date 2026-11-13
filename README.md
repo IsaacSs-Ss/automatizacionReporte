@@ -11,6 +11,13 @@ El archivo se procesa **en el navegador**: el Excel no se sube a ningún servido
 3. Cada reporte queda guardado en el historial del navegador. Para comparar, elige otro día en **Comparar contra**.
 4. Usa **Exportar historial** de vez en cuando como respaldo, o para llevarlo a otra computadora con **Importar historial**.
 
+El tablero cabe en una sola pantalla y se navega con pestañas:
+
+- **Bebidas**: Refrescos · Cervezas · Jugos, aguas y café, en 3 columnas.
+- **Alimentos**: Tacos dorados · Complementos · Postres, con el desglose de órdenes y medias órdenes.
+- **Comparativo**: qué subió y qué bajó contra el día elegido, y la tendencia por día.
+- **Datos**: las tablas (conteo del día, historial y las líneas del Excel que se contaron).
+
 ## De dónde salen los números
 
 Se usa la hoja 3 (**Resumen de Ventas**) y dos tablas:

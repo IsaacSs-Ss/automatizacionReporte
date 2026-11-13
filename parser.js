@@ -33,12 +33,12 @@
     { id: "negra-modelo", nombre: "Negra Modelo", categoria: "Cervezas", reglas: [[/^NEGRA MODELO$/, 1]] },
     { id: "modelo-especial", nombre: "Modelo Especial", categoria: "Cervezas", reglas: [[/^MODELO ESPECIAL$/, 1]] },
     { id: "clamato", nombre: "Clamato", categoria: "Cervezas", reglas: [[/^CLAMATO$/, 1]] },
-    { id: "jugo", nombre: "Jugo", categoria: "Bebidas", reglas: [[/^JUGO$/, 1]] },
+    { id: "jugo", nombre: "Jugo", categoria: "Jugos, aguas y café", reglas: [[/^JUGO$/, 1]] },
     // "AGUA HORCHATA TR (350 ml)" en platillos y "AGUA DE HORCHATA" en combos
-    { id: "agua-horchata", nombre: "Agua de horchata", categoria: "Bebidas", reglas: [[/^AGUA (DE )?HORCHATA$/, 1]] },
-    { id: "agua-jamaica", nombre: "Agua de jamaica", categoria: "Bebidas", reglas: [[/^AGUA (DE )?JAMAICA$/, 1]] },
+    { id: "agua-horchata", nombre: "Agua de horchata", categoria: "Jugos, aguas y café", reglas: [[/^AGUA (DE )?HORCHATA$/, 1]] },
+    { id: "agua-jamaica", nombre: "Agua de jamaica", categoria: "Jugos, aguas y café", reglas: [[/^AGUA (DE )?JAMAICA$/, 1]] },
     // "CAFE DE OLLA TR" y "CAFÉ DE OLLA" (combos; a veces con la É dañada). No incluye café americano.
-    { id: "cafe-olla", nombre: "Café de olla", categoria: "Bebidas", reglas: [[/^CAF.{1,2} DE OLLA$/, 1]] },
+    { id: "cafe-olla", nombre: "Café de olla", categoria: "Jugos, aguas y café", reglas: [[/^CAF.{1,2} DE OLLA$/, 1]] },
     {
       id: "tacos-dorados", nombre: "Tacos dorados", categoria: "Tacos dorados", unidad: "piezas",
       // Dorados y semidorados van al mismo conteo, en piezas.

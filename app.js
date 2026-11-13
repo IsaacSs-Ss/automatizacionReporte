@@ -10,12 +10,27 @@
   const CAT_INFO = {
     "Refrescos": { img: IMG + "2025/04/refresocs_.jpg", unidad: "refrescos y aguas" },
     "Cervezas": { img: IMG + "2020/07/cerveza.png", unidad: "cervezas y clamatos" },
-    "Bebidas": { img: IMG + "2025/04/bebidas_elmexiquense.jpg", unidad: "jugos, aguas y cafés" },
+    "Jugos, aguas y café": { img: IMG + "2025/04/bebidas_elmexiquense.jpg", unidad: "vasos y tazas" },
     "Tacos dorados": { img: IMG + "2025/04/tacos-dorados-barbacoa.jpg", unidad: "tacos (piezas)" },
     "Complementos": { img: IMG + "2025/04/complementos_elmexiquense.jpg", unidad: "órdenes y piezas" },
     "Postres": { img: IMG + "2025/04/cafe_postre_elmexiquense.jpg", unidad: "postres" },
   };
   const CATEGORIAS = [...new Set(P.PRODUCTOS.map((p) => p.categoria))];
+
+  // Dos paneles: bebidas y alimentos, con 3 categorías cada uno.
+  const PANELES = {
+    bebidas: { nombre: "Bebidas", icono: "🥤", img: IMG + "2025/04/bebidas_elmexiquense.jpg",
+      cats: ["Refrescos", "Cervezas", "Jugos, aguas y café"] },
+    alimentos: { nombre: "Alimentos", icono: "🌮", img: IMG + "2025/04/tacos-dorados-barbacoa.jpg",
+      cats: ["Tacos dorados", "Complementos", "Postres"] },
+  };
+  // Pestañas extra (sin foto)
+  const PESTANAS_EXTRA = {
+    comparativo: { nombre: "Comparativo", icono: "📈" },
+    datos: { nombre: "Datos", icono: "🗂" },
+  };
+  const pref = (k, def) => { try { return localStorage.getItem("conteoProductos." + k) || def; } catch (_) { return def; } };
+  const guardarPref = (k, v) => { try { localStorage.setItem("conteoProductos." + k, v); } catch (_) { /* opcional */ } };
   const CAT_DE = Object.fromEntries(P.PRODUCTOS.map((p) => [p.id, p.categoria]));
   const AREA_LARGO = { PB: "Planta baja", PA: "Planta alta", TR: "Terraza", PLL: "Para llevar", DV: "DV", OTRA: "Sin área" };
   const TONOS_PARTES = ["#7a5a43", "#a78265", "#d6bfa9"]; // tonos café de la marca para los desgloses
@@ -34,14 +49,19 @@
   const el = {
     drop: $("drop"), inp: $("inpArchivo"), error: $("error"), panel: $("panel"), sub: $("subtitulo"),
     selActual: $("selActual"), selComparar: $("selComparar"), leyenda: $("leyenda"),
-    categorias: $("categorias"), bloques: $("bloques"),
+    bloques: $("bloques"), paneles: $("paneles"), controles: $("controles"),
+    vistaPanel: $("vistaPanel"), vistaComp: $("vistaComparativo"), vistaDatos: $("vistaDatos"), subDatos: $("subDatos"),
     secComp: $("secComparacion"), notaComp: $("notaComparacion"), grafComp: $("graficaComparacion"),
     secTend: $("secTendencia"), selTend: $("selTendencia"), grafTend: $("graficaTendencia"),
     tabla: $("tabla"), tablaHist: $("tablaHistorial"), notaHist: $("notaHistorial"), tablaDet: $("tablaDetalle"),
     btnExp: $("btnExportar"), inpImp: $("inpImportar"), tip: $("tooltip"),
   };
 
-  const estado = { historial: cargarHistorial(), actual: null, comparar: "", tendencia: "tacos-dorados" };
+  const estado = {
+    historial: cargarHistorial(), actual: null, comparar: "", tendencia: "tacos-dorados",
+    panel: PANELES[pref("panel")] || PESTANAS_EXTRA[pref("panel")] ? pref("panel") : "bebidas",
+    tablaDatos: "tabla",
+  };
   const cache = new Map();
 
   // ================================================================ historial
@@ -133,6 +153,7 @@
     const ks = clavesOrdenadas();
     if (!ks.length) {
       el.panel.hidden = true;
+      el.controles.hidden = true;
       el.drop.classList.remove("oculto");
       el.sub.textContent = "Conteo de productos vendidos";
       return;
@@ -144,6 +165,7 @@
     if (estado.comparar && !estado.historial[estado.comparar]) estado.comparar = "";
 
     el.panel.hidden = false;
+    el.controles.hidden = false;
     el.drop.classList.add("oculto");
     const act = reporte(estado.actual);
     const cmp = estado.comparar ? reporte(estado.comparar) : null;
@@ -153,9 +175,7 @@
     else ocultarError();
 
     renderSelects(ks);
-    renderLeyenda(act);
-    renderCategorias(act, cmp);
-    renderBloques(act, cmp);
+    renderPanel(act, cmp);
     renderComparacion(act, cmp);
     renderTendencia(ks);
     renderTabla(act, cmp);
@@ -203,20 +223,34 @@
     return `<img src="${src}" alt="${alt}" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()" />`;
   }
 
-  function renderCategorias(act, cmp) {
-    el.categorias.innerHTML = CATEGORIAS.map((cat) => {
-      const info = CAT_INFO[cat] || {};
-      const v = sumaCat(act, cat);
-      return `<a class="cat" href="#${idCat(cat)}">
-        ${info.img ? imagen(info.img, cat) : ""}
-        <div class="cat-in">
-          <div class="cat-nombre">${cat}</div>
-          <div class="cat-valor">${num(v)}</div>
-          <div class="cat-unidad">${info.unidad || "unidades"}</div>
-          ${cmp ? cambio(v, sumaCat(cmp, cat), { chip: true }) : ""}
-        </div>
-      </a>`;
-    }).join("");
+  // ---------------------------------------------------------------- panel
+  function renderPanel(act, cmp) {
+    const fotos = Object.entries(PANELES).map(([id, pn]) => {
+      const resumen = pn.cats.map((c) => `${num(sumaCat(act, c))} ${c.toLowerCase()}`).join(" · ");
+      return `<button type="button" class="panel-tab" role="tab" data-panel="${id}" aria-selected="${id === estado.panel}">
+        ${imagen(pn.img, pn.nombre)}
+        <span class="panel-tab-in"><span class="panel-tab-nombre">${pn.icono} ${pn.nombre}</span>
+        <span class="panel-tab-res">${resumen}</span></span>
+      </button>`;
+    });
+    const extra = Object.entries(PESTANAS_EXTRA).map(([id, t]) =>
+      `<button type="button" class="panel-tab extra" role="tab" data-panel="${id}" aria-selected="${id === estado.panel}">
+        <span class="panel-tab-in"><span class="panel-tab-nombre">${t.icono} ${t.nombre}</span></span></button>`);
+    el.paneles.innerHTML = fotos.concat(extra).join("");
+
+    const esPanel = !!PANELES[estado.panel];
+    el.vistaPanel.hidden = !esPanel;
+    el.vistaComp.hidden = estado.panel !== "comparativo";
+    el.vistaDatos.hidden = estado.panel !== "datos";
+    if (esPanel) {
+      renderLeyenda(act);
+      renderBloques(act, cmp, PANELES[estado.panel].cats);
+    }
+    for (const b of el.subDatos.querySelectorAll("[data-tabla]")) {
+      const on = b.dataset.tabla === estado.tablaDatos;
+      b.setAttribute("aria-pressed", String(on));
+      $(b.dataset.tabla).hidden = !on;
+    }
   }
 
   function barraApilada(p, max, areas) {
@@ -227,33 +261,75 @@
       const tip = `<b>${p.nombre}</b><br>${AREA_LARGO[a]}: <b>${num(v)}</b> (${fmtPct.format((v / p.total) * 100)}%)`;
       return `<div class="seg" style="flex:${v} 1 0;background:var(--a-${a})" data-tip="${esc(tip)}"></div>`;
     }).join("");
-    return `<div class="apilada" style="width:${Math.max(ancho, 2)}%" role="img" aria-label="${p.nombre}: ${areas.filter((a) => p.porArea[a]).map((a) => `${AREA_LARGO[a]} ${num(p.porArea[a])}`).join(", ")}">${segs}</div>`;
+    return `<div class="pista"><div class="apilada" style="width:${Math.max(ancho, 2)}%" role="img" aria-label="${p.nombre}: ${areas.filter((a) => p.porArea[a]).map((a) => `${AREA_LARGO[a]} ${num(p.porArea[a])}`).join(", ")}">${segs}</div></div>`;
   }
 
-  function renderBloques(act, cmp) {
+  /** Pie de columna: en qué área se vendió más la categoría. */
+  function resumenAreas(act, cat, areas) {
+    const lista = act.productos.filter((p) => p.categoria === cat);
+    const total = lista.reduce((s, p) => s + p.total, 0);
+    if (!total) return "";
+    const por = areas.map((a) => [a, lista.reduce((s, p) => s + (p.porArea[a] || 0), 0)]).filter(([, v]) => v);
+    const top = por.reduce((m, x) => (x[1] > m[1] ? x : m), por[0]);
+    const barra = por.map(([a, v]) =>
+      `<div style="flex:${v} 1 0;background:var(--a-${a})" data-tip="${esc(`<b>${cat}</b><br>${AREA_LARGO[a]}: <b>${num(v)}</b> (${fmtPct.format((v / total) * 100)}%)`)}"></div>`).join("");
+    const items = por.map(([a, v]) => `
+      <div class="ra-item ${a === top[0] ? "ra-top" : ""}">
+        <span class="ra-area"><i class="punto" style="background:var(--a-${a})"></i>${AREA_LARGO[a]}</span>
+        <span class="ra-valor">${num(v)}</span>
+        <span class="ra-pct">${fmtPct.format((v / total) * 100)}%</span>
+      </div>`).join("");
+    return `<div class="resumen-areas">
+      <div class="ra-titulo">¿Dónde se vendió? <span>Más en <b>${AREA_LARGO[top[0]]}</b></span></div>
+      <div class="ra-barra">${barra}</div>
+      <div class="ra-lista">${items}</div>
+    </div>`;
+  }
+
+  /** Si una columna no alcanza, se oculta su resumen por área para no tener que desplazar. */
+  function ajustarColumnas() {
+    const cols = [...document.querySelectorAll(".col-cuerpo")];
+    cols.forEach((c) => c.classList.remove("sin-resumen"));
+    // Si una columna no alcanza, se quita en las tres para que el panel se vea parejo.
+    if (cols.some((c) => c.scrollHeight > c.clientHeight + 1)) cols.forEach((c) => c.classList.add("sin-resumen"));
+  }
+
+  function renderBloques(act, cmp, cats = CATEGORIAS) {
     const areas = areasUsadas(act);
     const prev = cmp ? mapa(cmp) : null;
-    el.bloques.innerHTML = CATEGORIAS.map((cat) => {
+    el.bloques.innerHTML = cats.map((cat) => {
       const info = CAT_INFO[cat] || {};
       const lista = act.productos.filter((p) => p.categoria === cat).sort((a, b) => b.total - a.total);
       const max = Math.max(1, ...lista.map((p) => p.total));
       const filas = lista.map((p) => `
         <div class="fila">
-          <div class="fila-nombre">${p.nombre}${p.unidad && p.unidad !== "unidades" ? ` <span class="nota">${p.unidad}</span>` : ""}</div>
-          <div class="fila-valor">${num(p.total)}</div>
+          <div class="fila-top">
+            <span class="fila-nombre">${p.nombre}${p.unidad && p.unidad !== "unidades" ? ` <span class="nota">${p.unidad}</span>` : ""}</span>
+            <span class="fila-delta">${prev ? cambio(p.total, prev[p.id] ? prev[p.id].total : 0) : ""}</span>
+            <span class="fila-valor">${num(p.total)}</span>
+            <span class="fila-parte" title="Parte del total de ${cat.toLowerCase()}">${fmtPct.format(sumaCat(act, cat) ? (p.total / sumaCat(act, cat)) * 100 : 0)}%</span>
+          </div>
           ${barraApilada(p, max, areas)}
-          <div class="fila-delta">${prev ? cambio(p.total, prev[p.id] ? prev[p.id].total : 0) : ""}</div>
         </div>`).join("");
       const fichas = lista.map(fichaDesglose).filter(Boolean).join("");
-      return `<article class="bloque" id="${idCat(cat)}">
-        <div class="bloque-foto">${info.img ? imagen(info.img, cat) : ""}</div>
-        <div class="bloque-cuerpo">
-          <div class="bloque-head"><h2>${cat}</h2><span class="bloque-total">${num(sumaCat(act, cat))} <span class="nota">${info.unidad || ""}</span></span></div>
+      const total = sumaCat(act, cat);
+      return `<article class="col" id="${idCat(cat)}">
+        <header class="col-head">
+          ${info.img ? imagen(info.img, cat) : ""}
+          <div class="col-head-in">
+            <h2>${cat}</h2>
+            <div class="col-total">${num(total)} <span>${info.unidad || ""}</span></div>
+            ${cmp ? `<div class="col-delta">${cambio(total, sumaCat(cmp, cat), { chip: true })}</div>` : ""}
+          </div>
+        </header>
+        <div class="col-cuerpo">
           ${filas}
           ${fichas ? `<div class="desglose">${fichas}</div>` : ""}
+          ${resumenAreas(act, cat, areas)}
         </div>
       </article>`;
     }).join("");
+    ajustarColumnas();
   }
 
   /** Ficha de desglose: tacos (orden de 3 / suelto / combo) y medias órdenes. */
@@ -281,8 +357,11 @@
 
   // ---------------------------------------------------------------- comparación
   function renderComparacion(act, cmp) {
-    if (!cmp) { el.secComp.hidden = true; return; }
-    el.secComp.hidden = false;
+    if (!cmp) {
+      el.notaComp.textContent = "";
+      el.grafComp.innerHTML = `<p class="vacio">Elige un día en <b>Comparar contra</b> (arriba) para ver qué subió y qué bajó.</p>`;
+      return;
+    }
     el.notaComp.textContent = `${fechaCorta(estado.actual)} contra ${fechaCorta(estado.comparar)} · % de cambio`;
     const prev = mapa(cmp);
     const filas = act.productos.map((p) => {
@@ -305,8 +384,12 @@
 
   // ---------------------------------------------------------------- tendencia
   function renderTendencia(ks) {
-    if (ks.length < 2) { el.secTend.hidden = true; return; }
-    el.secTend.hidden = false;
+    if (ks.length < 2) {
+      el.selTend.hidden = true;
+      el.grafTend.innerHTML = `<p class="vacio">Sube al menos dos días para ver la tendencia.</p>`;
+      return;
+    }
+    el.selTend.hidden = false;
     // Selector: categorías completas y cada producto.
     const opciones = [];
     for (const cat of CATEGORIAS) {
@@ -376,7 +459,7 @@
   }
 
   function renderHistorial(ks) {
-    el.notaHist.textContent = `(${ks.length} día${ks.length === 1 ? "" : "s"} en este navegador)`;
+    el.notaHist.textContent = `(${ks.length})`;
     const mapas = ks.map((k) => mapa(reporte(k)));
     el.tablaHist.tHead.innerHTML = `<tr><th>Producto</th>${ks.map((k) =>
       `<th class="num">${fechaCorta(k)} <button class="x" data-borrar="${encodeURIComponent(k)}" title="Quitar este día del historial">✕</button></th>`).join("")}${ks.length > 1 ? '<th class="num">Promedio</th>' : ""}</tr>`;
@@ -430,7 +513,21 @@
 
   el.selActual.onchange = () => { estado.actual = el.selActual.value; estado.comparar = anteriorA(estado.actual); render(); };
   el.selComparar.onchange = () => { estado.comparar = el.selComparar.value; render(); };
+  el.paneles.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-panel]");
+    if (!b) return;
+    estado.panel = b.dataset.panel; guardarPref("panel", estado.panel);
+    render();
+  });
+  el.subDatos.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-tabla]");
+    if (!b) return;
+    estado.tablaDatos = b.dataset.tabla;
+    render();
+  });
   el.selTend.onchange = () => { estado.tendencia = el.selTend.value; renderTendencia(clavesOrdenadas()); };
+  let tResize;
+  window.addEventListener("resize", () => { clearTimeout(tResize); tResize = setTimeout(ajustarColumnas, 120); });
 
   // Tooltips de barras (cualquier elemento con data-tip)
   document.addEventListener("mousemove", (e) => {
